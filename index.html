@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masonry Image Grid</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            padding: 10%;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .masonry-grid {
+            column-count: 4;
+            column-gap: 15px;
+            padding: 15px;
+        }
+
+        .grid-item {
+            break-inside: avoid;
+            margin-bottom: 15px;
+            position: relative;
+            cursor: pointer;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .grid-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .grid-item:hover .grid-image {
+            transform: scale(1.03);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            position: relative;
+            max-width: 1200px;
+            width: 90%;
+            max-height: 90vh;
+            margin: auto;
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            animation: modalSlide 0.3s ease;
+        }
+
+        .modal-image-container {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+
+            padding: 30px;
+            background-color: #f8f9fa;
+        }
+
+        .modal-image-wrapper {
+            width: 100%;
+            max-width: 500px;
+            height: 400px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-image-slider {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .modal-main-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .slider-controls {
+            position: absolute;
+            top: 50%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 15px;
+            transform: translateY(-50%);
+            z-index: 2;
+        }
+
+        .slider-btn {
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            transition: background 0.3s;
+        }
+
+        .slider-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .image-thumbnails {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 10px;
+            overflow-x: auto;
+            max-width: 100%;
+        }
+
+        .thumbnail {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.3s, opacity 0.3s;
+        }
+
+        .thumbnail.active {
+            border-color: #3498db;
+        }
+
+        .thumbnail:hover {
+            opacity: 0.8;
+        }
+
+        .modal-details {
+            flex: 1;
+            padding: 40px;
+            background-color: white;
+            color: #333;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            line-height: 1.2;
+        }
+
+        .modal-meta {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .modal-description {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #34495e;
+            margin-bottom: 30px;
+        }
+
+        .modal-description p {
+            margin-bottom: 15px;
+        }
+
+        .modal-related {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid #ecf0f1;
+        }
+
+        .related-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .related-images {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .related-img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.3s, opacity 0.2s;
+        }
+
+        .related-img:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: none;
+            font-size: 24px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .close-btn:hover {
+            background: rgba(0, 0, 0, 1);
+            transform: scale(1.1);
+        }
+
+        /* Animation */
+        @keyframes modalSlide {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .masonry-grid {
+                column-count: 3;
+            }
+            .modal-content {
+                flex-direction: column;
+                width: 95%;
+            }
+            .modal-image-container {
+                padding: 20px;
+            }
+            .modal-image-wrapper {
+                height: 350px;
+                max-width: 100%;
+            }
+            .modal-details {
+                padding: 30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .masonry-grid {
+                column-count: 2;
+            }
+            .modal-content {
+                height: 95vh;
+            }
+            .modal-image-wrapper {
+                height: 300px;
+            }
+            .modal-title {
+                font-size: 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .masonry-grid {
+                column-count: 1;
+                padding: 10px;
+            }
+            .grid-item {
+                margin-bottom: 10px;
+            }
+            .modal-content {
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+            }
+            .modal-image-wrapper {
+                height: 250px;
+            }
+            .modal-details {
+                padding: 20px;
+            }
+            .modal-title {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="masonry-grid" id="gridContainer">
+        <!-- Images will be loaded here -->
+    </div>
+
+    <!-- Modal for image details -->
+    <div class="modal" id="imageModal">
+        <button class="close-btn" id="closeModal">&times;</button>
+        <div class="modal-content">
+            <div class="modal-image-container">
+                <div class="modal-image-wrapper">
+                    <div class="modal-image-slider">
+                        <img id="modalMainImage" class="modal-main-image" src="" alt="">
+                    </div>
+                    <div class="slider-controls">
+                        <button class="slider-btn prev-btn">‹</button>
+                        <button class="slider-btn next-btn">›</button>
+                    </div>
+                </div>
+                <div class="image-thumbnails" id="thumbnailsContainer">
+                    <!-- Thumbnails will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-details">
+                <h2 id="modalTitle" class="modal-title"></h2>
+                <div class="modal-meta">
+                    <span id="modalLikes"></span> likes • <span id="modalDate"></span>
+                </div>
+                <div id="modalDescription" class="modal-description">
+                    <!-- Description will be loaded here -->
+                </div>
+                <div class="modal-related">
+                    <h3 class="related-title">Related Images</h3>
+                    <div class="related-images" id="relatedImages">
+                        <!-- Related images will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+     const images= [{
+  id: 1,
+  url: "https://images.unsplash.com/photo-1542744095-fcf48d80b0fd?ixlib=rb-4.0.3&w=600&h=800&fit=crop",
+  title: "Urban Street Art",
+  description: "Vibrant mural transforming the city landscape with bold colors and expressive forms. This piece was created during a street art festival in downtown Berlin. The artist used spray paint and acrylics to achieve the vibrant colors.<br><br>Location: Berlin, Germany<br>Artist: Maria Schmidt<br>Medium: Spray paint & Acrylics",
+  likes: "2.4k",
+  date: "2 weeks ago",
+  related: [
+    "https://images.unsplash.com/photo-1579762715118-a6f1d4b934f1?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1541961017774-22349e4a1262?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1542744095-fcf48d80b0fd?ixlib=rb-4.0.3&w=600&h=800&fit=crop",
+    "https://images.unsplash.com/photo-1579762715118-a6f1d4b934f1?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 2,
+  url: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?ixlib=rb-4.0.3&w=700&h=500&fit=crop",
+  title: "Golden Sunset Fields",
+  description: "Rolling fields bathed in warm sunset hues creating a calm rural atmosphere.<br><br>Location: Tuscany, Italy<br>Photographer: Luca Romano<br>Medium: Digital Photography",
+  likes: "3.1k",
+  date: "5 days ago",
+  related: [
+    "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?ixlib=rb-4.0.3&w=700&h=500&fit=crop",
+    "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?ixlib=rb-4.0.3&w=600&h=800&fit=crop",
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 3,
+  url: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-4.0.3&w=600&h=750&fit=crop",
+  title: "City Lights",
+  description: "Long exposure cityscape capturing traffic trails and glowing skyscrapers.<br><br>Location: New York, USA<br>Photographer: Daniel Brooks<br>Medium: Long Exposure Photography",
+  likes: "2.9k",
+  date: "4 days ago",
+  related: [
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1484101403633-562f891dc89a?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-4.0.3&w=600&h=750&fit=crop",
+    "https://images.unsplash.com/photo-1484101403633-562f891dc89a?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 4,
+  url: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&w=500&h=700&fit=crop",
+  title: "Misty Mountains",
+  description: "Layered mountain ranges fading into morning mist.<br><br>Location: Swiss Alps<br>Photographer: Anna Keller<br>Medium: Landscape Photography",
+  likes: "4.6k",
+  date: "1 week ago",
+  related: [
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&w=500&h=700&fit=crop",
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 5,
+  url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&w=800&h=500&fit=crop",
+  title: "Ocean Waves",
+  description: "Powerful waves crashing against the shoreline under golden light.<br><br>Location: Bali, Indonesia<br>Photographer: Ryan Cole<br>Medium: Seascape Photography",
+  likes: "5.3k",
+  date: "3 days ago",
+  related: [
+    "https://images.unsplash.com/photo-1471922694854-ff1b63b20054?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&w=800&h=500&fit=crop",
+    "https://images.unsplash.com/photo-1471922694854-ff1b63b20054?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 6,
+  url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&w=600&h=900&fit=crop",
+  title: "Deep Forest",
+  description: "Dense forest with sunlight piercing through tall trees.<br><br>Location: Black Forest, Germany<br>Photographer: Jonas Weber<br>Medium: Nature Photography",
+  likes: "2.8k",
+  date: "2 weeks ago",
+  related: [
+    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&w=600&h=900&fit=crop",
+    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 7,
+  url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&w=500&h=750&fit=crop",
+  title: "Modern Architecture",
+  description: "Clean lines and symmetry in contemporary city buildings.<br><br>Location: Tokyo, Japan<br>Photographer: Kenji Sato<br>Medium: Architectural Photography",
+  likes: "1.7k",
+  date: "6 days ago",
+  related: [
+    "https://images.unsplash.com/photo-1484101403633-562f891dc89a?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&w=500&h=750&fit=crop",
+    "https://images.unsplash.com/photo-1484101403633-562f891dc89a?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 8,
+  url: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&w=700&h=450&fit=crop",
+  title: "Calm Lake",
+  description: "Still lake reflecting surrounding mountains and sky.<br><br>Location: Lake Bled, Slovenia<br>Photographer: Petra Novak<br>Medium: Landscape Photography",
+  likes: "2.1k",
+  date: "1 week ago",
+  related: [
+    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&w=700&h=450&fit=crop",
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 9,
+  url: "https://images.unsplash.com/photo-1492724441997-5dc865305da7?ixlib=rb-4.0.3&w=500&h=600&fit=crop",
+  title: "Minimal Workspace",
+  description: "Clean desk setup with coffee and notebook.<br><br>Location: Copenhagen, Denmark<br>Photographer: Emil Larsen<br>Medium: Lifestyle Photography",
+  likes: "1.2k",
+  date: "3 weeks ago",
+  related: [
+    "https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1492724441997-5dc865305da7?ixlib=rb-4.0.3&w=500&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 10,
+  url: "https://images.unsplash.com/photo-1471922694854-ff1b63b20054?ixlib=rb-4.0.3&w=650&h=850&fit=crop",
+  title: "Footprints in Sand",
+  description: "Footsteps fading into wet sand during sunset.<br><br>Location: Maldives<br>Photographer: Sarah Kim<br>Medium: Travel Photography",
+  likes: "2.6k",
+  date: "5 days ago",
+  related: [
+    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1471922694854-ff1b63b20054?ixlib=rb-4.0.3&w=650&h=850&fit=crop",
+    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 11,
+  url: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&w=400&h=600&fit=crop",
+  title: "Morning Coffee",
+  description: "Freshly brewed coffee with soft morning light.<br><br>Location: Vienna, Austria<br>Photographer: Lukas Brandt<br>Medium: Still Life Photography",
+  likes: "940",
+  date: "Yesterday",
+  related: [
+    "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1492724441997-5dc865305da7?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&w=400&h=600&fit=crop",
+    "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1492724441997-5dc865305da7?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 12,
+  url: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?ixlib=rb-4.0.3&w=800&h=550&fit=crop",
+  title: "Crowded Streets",
+  description: "Busy city intersection filled with daily life movement.<br><br>Location: Hong Kong<br>Photographer: Wei Chen<br>Medium: Street Photography",
+  likes: "1.9k",
+  date: "1 week ago",
+  related: [
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1484101403633-562f891dc89a?ixlib=rb-4.0.3&w=800&h=550&fit=crop",
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 13,
+  url: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-4.0.3&w=500&h=800&fit=crop",
+  title: "Snowy Summit",
+  description: "Climber standing on a snowy mountain peak.<br><br>Location: Himalayas<br>Photographer: Arjun Mehta<br>Medium: Adventure Photography",
+  likes: "4.2k",
+  date: "2 weeks ago",
+  related: [
+    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-4.0.3&w=500&h=800&fit=crop",
+    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+},
+{
+  id: 14,
+  url: "https://images.unsplash.com/photo-1491553895911-0055eca6402d?ixlib=rb-4.0.3&w=650&h=450&fit=crop",
+  title: "Open Road",
+  description: "Lonely road stretching through desert landscape.<br><br>Location: Nevada, USA<br>Photographer: Mike Turner<br>Medium: Travel Photography",
+  likes: "1.5k",
+  date: "6 days ago",
+  related: [
+    "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1491553895911-0055eca6402d?ixlib=rb-4.0.3&w=650&h=450&fit=crop",
+    "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?ixlib=rb-4.0.3&w=600&h=600&fit=crop",
+  ]
+},
+{
+  id: 15,
+  url: "https://images.unsplash.com/photo-1519681393784-d120267933ba?ixlib=rb-4.0.3&w=700&h=700&fit=crop",
+  title: "Starry Night",
+  description: "Milky Way stretching across a quiet night sky.<br><br>Location: Atacama Desert, Chile<br>Photographer: Sofia Alvarez<br>Medium: Astrophotography",
+  likes: "5.8k",
+  date: "3 days ago",
+  related: [
+    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&w=150&h=150&fit=crop",
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&w=150&h=150&fit=crop"
+  ],
+  gallery: [
+    "https://images.unsplash.com/photo-1519681393784-d120267933ba?ixlib=rb-4.0.3&w=700&h=700&fit=crop",
+    "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&w=600&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&w=600&h=600&fit=crop"
+  ]
+}];
+
+
+        // Initialize grid
+        function initializeGrid() {
+            const gridContainer = document.getElementById('gridContainer');
+            
+            images.forEach(image => {
+                const gridItem = document.createElement('div');
+                gridItem.className = 'grid-item';
+                gridItem.dataset.id = image.id;
+                
+                const img = document.createElement('img');
+                img.className = 'grid-image';
+                img.src = image.url;
+                img.alt = image.title;
+                img.loading = 'lazy';
+                
+                gridItem.appendChild(img);
+                gridContainer.appendChild(gridItem);
+                
+                // Add click event
+                gridItem.addEventListener('click', () => openModal(image));
+            });
+        }
+
+        // Modal elements
+        const modal = document.getElementById('imageModal');
+        const modalMainImage = document.getElementById('modalMainImage');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDescription = document.getElementById('modalDescription');
+        const modalLikes = document.getElementById('modalLikes');
+        const modalDate = document.getElementById('modalDate');
+        const relatedImagesContainer = document.getElementById('relatedImages');
+        const thumbnailsContainer = document.getElementById('thumbnailsContainer');
+        const closeBtn = document.getElementById('closeModal');
+        const prevBtn = document.querySelector('.prev-btn');
+        const nextBtn = document.querySelector('.next-btn');
+
+        let currentImageIndex = 0;
+        let currentGallery = [];
+
+        // Open modal with image details
+        function openModal(image) {
+            modalMainImage.src = image.url;
+            modalMainImage.alt = image.title;
+            modalTitle.textContent = image.title;
+            modalDescription.innerHTML = image.description;
+            modalLikes.textContent = image.likes;
+            modalDate.textContent = image.date;
+            
+            // Set current gallery
+            currentGallery = image.gallery || [image.url];
+            currentImageIndex = 0;
+            
+            // Load thumbnails
+            loadThumbnails(currentGallery);
+            
+            // Load related images
+            loadRelatedImages(image.related);
+            
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Load thumbnails
+        function loadThumbnails(gallery) {
+            thumbnailsContainer.innerHTML = '';
+            
+            gallery.forEach((imgUrl, index) => {
+                const thumbnail = document.createElement('img');
+                thumbnail.className = 'thumbnail';
+                if (index === 0) thumbnail.classList.add('active');
+                thumbnail.src = imgUrl.replace('w=600', 'w=150');
+                thumbnail.alt = `Thumbnail ${index + 1}`;
+                thumbnail.addEventListener('click', () => {
+                    setActiveImage(index);
+                });
+                thumbnailsContainer.appendChild(thumbnail);
+            });
+        }
+
+        // Load related images
+        function loadRelatedImages(related) {
+            relatedImagesContainer.innerHTML = '';
+            
+            related.forEach(relatedUrl => {
+                const relatedImg = document.createElement('img');
+                relatedImg.className = 'related-img';
+                relatedImg.src = relatedUrl;
+                relatedImg.alt = 'Related image';
+                relatedImg.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    modalMainImage.src = relatedUrl;
+                });
+                relatedImagesContainer.appendChild(relatedImg);
+            });
+        }
+
+        // Set active image in slider
+        function setActiveImage(index) {
+            currentImageIndex = index;
+            modalMainImage.src = currentGallery[index];
+            
+            // Update active thumbnail
+            document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
+                thumb.classList.toggle('active', i === index);
+            });
+        }
+
+        // Next image in slider
+        function nextImage() {
+            currentImageIndex = (currentImageIndex + 1) % currentGallery.length;
+            setActiveImage(currentImageIndex);
+        }
+
+        // Previous image in slider
+        function prevImage() {
+            currentImageIndex = (currentImageIndex - 1 + currentGallery.length) % currentGallery.length;
+            setActiveImage(currentImageIndex);
+        }
+
+        // Close modal
+        function closeModal() {
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Event listeners
+        closeBtn.addEventListener('click', closeModal);
+        prevBtn.addEventListener('click', prevImage);
+        nextBtn.addEventListener('click', nextImage);
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeModal();
+            }
+            if (e.key === 'ArrowLeft' && modal.classList.contains('active')) {
+                prevImage();
+            }
+            if (e.key === 'ArrowRight' && modal.classList.contains('active')) {
+                nextImage();
+            }
+        });
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', initializeGrid);
+    </script>
+</body>
+</html>
